@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Custom_Identity.Models;
+using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.EntityFramework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -8,7 +11,8 @@ namespace Custom_Identity.Controllers
 {
     [Authorize(Roles ="SuperAdmin")]
     public class AdminController : Controller
-    { 
+    {
+        ApplicationDbContext context = new ApplicationDbContext();
         // GET: Admin
         public ActionResult Index()
         {
@@ -19,8 +23,70 @@ namespace Custom_Identity.Controllers
         {
             return View();
         }
+
+        [HttpPost]
+        public ActionResult CreateUser(FormCollection form)
+        {
+            var userManager = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(context));
+            string UserName = form["txtEmail"];
+            string email = form["txtEmail"];
+            string pwd = form["txtPassword"];
+
+            //create user
+            var user = new ApplicationUser();
+            user.UserName = UserName;
+            user.Email = email;
+
+            var newUser = userManager.Create(user, pwd);   
+            return View();
+        }
+
+        public ActionResult CreateRole()
+        {
+          
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult CreateRole(FormCollection form)
+        {
+            string rolename = form["RoleName"];
+            var roleManager = new RoleManager<IdentityRole>(new RoleStore<IdentityRole>(context));
+
+            if (!roleManager.RoleExists(rolename))
+            {
+                var role = new IdentityRole(rolename);
+                roleManager.Create(role);
+
+                //var user = new ApplicationUser();
+                //user.UserName = "chuks2ken@gmail.com";
+                //user.Email = "chuks2ken@gmail.com";
+                //string pwd = "Passw0rd@123";
+
+                ////var newUser = userManager.Create(user, pwd);
+                //if (newUser.Succeeded)
+                //{
+                //    userManager.AddToRole(user.Id, "SuperAdmin");
+                //}
+            }
+                return View();
+        }
         public ActionResult AssignRole()
         {
+            ViewBag.Roles = context.Roles.Select(r => new SelectListItem {Value=r.Name.ToString(), Text=r.Name }).ToList();
+         
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult AssignRole(FormCollection form)
+        {
+            string user = form["txtUserName"];
+            string rol = form["RoleName"];
+            ApplicationUser existingUser = context.Users.Where(u => u.UserName.Equals(user,StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+            var userManager = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(context));
+            userManager.AddToRole(existingUser.Id, rol);
+
             return View();
         }
     }
